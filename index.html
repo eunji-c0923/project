@@ -9,7 +9,10 @@
 <body>
   <header id="main-header">
     <div class="top-bar">
-      <div class="logo">스마트파킹</div>
+      <div class="logo">
+        <img src="img/logo.png" alt="스마트파킹 로고" class="logo-image" id="logo-image">
+        
+      </div>
       <div class="auth-section" id="auth-section">
         <!-- 로그인 전 -->
         <div class="login-buttons" id="login-buttons">
@@ -94,7 +97,7 @@
         <p>AI 기반 주차관리와 화재감지 시스템으로 안전하고 편리한 주차 서비스를 제공합니다</p>
         <div class="cta-buttons">
           <button class="cta-btn primary" onclick="showUnifiedLogin()">서비스 이용하기</button>
-          <button class="cta-btn secondary" onclick="showSignupModal()">회원가입</button>
+          <button class="cta-btn secondary" onclick="showSignupModal()">첫 주차 무료 체험</button>
         </div>
       </div>
       
@@ -209,7 +212,7 @@
         <h2>위치 안내</h2>
         <div class="location-content">
           <div class="location-info">
-            <h3>📍 스마트파킹 타워</h3>
+            <h3>📍 세이프파킹 타워</h3>
             <div class="address">
               <p><strong>주소:</strong> 서울특별시 강남구 테헤란로 123</p>
               <p><strong>지하철:</strong> 2호선 역삼역 3번 출구 도보 5분</p>
@@ -461,6 +464,27 @@
     <p>&copy; 2025 스마트파킹 | 안전하고 효율적인 주차장 관리</p>
   </footer>
 
+  <!-- 로고 이미지 오류 시 폴백 처리 -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const logoImage = document.getElementById('logo-image');
+      
+      // 이미지 로드 실패 시 대체 텍스트로 처리
+      logoImage.addEventListener('error', function() {
+        this.style.display = 'none';
+        // 기존 텍스트 로고 스타일 유지
+      });
+      
+      // 이미지 로드 성공 시 텍스트 숨김
+      logoImage.addEventListener('load', function() {
+        const logoText = document.querySelector('.logo-text');
+        if (logoText) {
+          logoText.style.marginLeft = '10px'; // 이미지와 텍스트 간격
+        }
+      });
+    });
+  </script>
+  
   <script src="unified-script.js"></script>
 </body>
 </html>

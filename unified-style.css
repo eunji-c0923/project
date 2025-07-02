@@ -30,11 +30,96 @@ header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* 로고 영역 스타일 */
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+}
+
+/* 로고 이미지 */
+.logo-image {
+  height: 50px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+/* 로고 텍스트 (이미지와 함께 표시되거나 폴백용) */
+.logo-text {
   font-size: 1.8rem;
   font-weight: 800;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: #2d3748;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+/* 다크모드나 특별한 배경에서 로고 텍스트 색상 조정 */
+.dark-theme .logo-text {
+  color: #ffffff;
+}
+
+/* 반응형 디자인 - 모바일에서 로고 크기 조정 */
+@media (max-width: 768px) {
+  .logo-image {
+    height: 40px;
+  }
+  
+  .logo-text {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-image {
+    height: 35px;
+  }
+  
+  .logo-text {
+    font-size: 1.3rem;
+  }
+  
+  .logo {
+    gap: 8px;
+  }
+}
+
+/* 로고 호버 효과 */
+.logo:hover .logo-image {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.logo:hover .logo-text {
+  color: #4299e1;
+}
+
+/* 로고 이미지 로딩 애니메이션 */
+.logo-image {
+  animation: logoFadeIn 0.6s ease-out;
+}
+
+@keyframes logoFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 이미지 로드 실패 시 스타일 */
+.logo-image[style*="display: none"] + .logo-text {
+  margin-left: 0;
 }
 
 /* Auth Section */
