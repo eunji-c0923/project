@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
   checkAutoLogin();
   setupFormValidation();
   setupKeyboardShortcuts();
-  setupSocialLoginButtons(); // 소셜 로그인 버튼 설정 추가
+  setupSocialLoginButtons();
 });
 
 // === 소셜 로그인 버튼 설정 ===
@@ -283,7 +283,8 @@ function redirectToAppropriatePage(userType) {
   if (userType === 'customer') {
     window.location.href = 'customer-dashboard.html';
   } else {
-    window.location.href = 'admin-dashboard.html';
+    // 관리자는 index.html(관리자 대시보드)로 이동
+    window.location.href = 'index.html';
   }
 }
 
@@ -398,9 +399,9 @@ function socialLogin(provider, event) {
     // 성공 메시지 표시
     showToast(`${provider === 'kakao' ? '카카오' : '네이버'} 로그인 성공!`, 'success');
     
-    // viewport.html로 이동
+    // 고객 대시보드로 이동
     setTimeout(() => {
-      window.location.href = 'viewport.html';
+      window.location.href = 'customer-dashboard.html';
     }, 1000);
     
   }, 2000);
@@ -448,41 +449,6 @@ function checkAutoLogin() {
   sessionStorage.removeItem('loginData');
   
   return false;
-  
-  /* 자동 로그인을 다시 활성화하려면 아래 코드의 주석을 해제하세요
-  if (savedLogin) {
-    try {
-      const loginData = JSON.parse(savedLogin);
-      const loginTime = new Date(loginData.loginTime);
-      const now = new Date();
-      const hoursPassed = (now - loginTime) / (1000 * 60 * 60);
-      
-      // 8시간 이내면 자동 로그인
-      if (hoursPassed < 8) {
-        showToast('자동 로그인 중...', 'info');
-        
-        setTimeout(() => {
-          // 소셜 로그인 사용자인 경우 viewport.html로 이동
-          if (loginData.socialProvider) {
-            window.location.href = 'viewport.html';
-          } else {
-            redirectToAppropriatePage(loginData.role);
-          }
-        }, 1500);
-        
-        return true;
-      } else {
-        // 만료된 로그인 정보 삭제
-        localStorage.removeItem('loginData');
-        sessionStorage.removeItem('loginData');
-      }
-    } catch (e) {
-      console.error('자동 로그인 확인 중 오류:', e);
-    }
-  }
-  
-  return false;
-  */
 }
 
 // === 폼 유효성 검사 ===
@@ -639,7 +605,7 @@ function getUserName(id, userType) {
   }
 }
 
-// showToast 함수 계속...
+// showToast 함수
 function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = 'toast';
@@ -703,6 +669,11 @@ function showToast(message, type = 'info') {
     }
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
     }
   `;
   document.head.appendChild(styleSheet);
@@ -950,104 +921,7 @@ function showModal(title, content, buttons = []) {
   };
 }
 
-// === 세션 관리 ===
-function startSessionTimer() {
-  let sessionTime = 0;
-  const maxSessionTime = 30 * 60; // 30분
-  
-  const sessionTimer = setInterval(() => {
-    sessionTime++;
-    
-    // 25분 경과 시 경고
-    if (sessionTime === 25 * 60) {
-      showToast('세션이 5분 후 만료됩니다. 활동을 계속하세요.', 'warning');
-    }
-    
-    // 30분 경과 시 자동 로그아웃
-    if (sessionTime >= maxSessionTime) {
-      clearInterval(sessionTimer);
-      handleSessionTimeout();
-    }
-  }, 1000);
-  
-  // 사용자 활동 감지
-  ['click', 'keypress', 'mousemove'].forEach(event => {
-    document.addEventListener(event, () => {
-      sessionTime = 0; // 활동 시 타이머 리셋
-    });
-  });
-}
-
-function handleSessionTimeout() {
-  showModal(
-    '세션 만료',
-    '<p>보안을 위해 30분간 활동이 없어 자동으로 로그아웃됩니다.</p>',
-    [
-      {
-        text: '다시 로그인',
-        primary: true,
-        onClick: () => {
-          window.location.reload();
-        }
-      }
-    ]
-  );
-  
-  // 로그인 정보 제거
-  localStorage.removeItem('loginData');
-  sessionStorage.removeItem('loginData');
-}
-
-// === 브라우저 호환성 체크 ===
-function checkBrowserCompatibility() {
-  const isIE = /MSIE|Trident/.test(navigator.userAgent);
-  
-  if (isIE) {
-    showToast('Internet Explorer는 지원하지 않습니다. Chrome, Firefox, Edge 등을 사용해주세요.', 'error');
-    return false;
-  }
-  
-  // 필수 기능 체크
-  const requiredFeatures = [
-    'localStorage' in window,
-    'sessionStorage' in window,
-    'addEventListener' in window,
-    'querySelector' in document
-  ];
-  
-  if (!requiredFeatures.every(f => f)) {
-    showToast('브라우저가 너무 오래되었습니다. 최신 브라우저를 사용해주세요.', 'error');
-    return false;
-  }
-  
-  return true;
-}
-
-// === 디버그 모드 ===
-const DEBUG_MODE = false;
-
-function debugLog(...args) {
-  if (DEBUG_MODE) {
-    console.log('[DEBUG]', ...args);
-  }
-}
-
-// === 초기화 시 브라우저 체크 추가 ===
-document.addEventListener('DOMContentLoaded', function() {
-  if (checkBrowserCompatibility()) {
-    initializeLoginPage();
-    
-    // 자동 로그인이 되지 않은 경우에만 세션 타이머 시작
-    if (!checkAutoLogin()) {
-      startSessionTimer();
-    }
-    
-    setupFormValidation();
-    setupKeyboardShortcuts();
-  }
-});
-
-// === 성능 최적화를 위한 디바운스 함수 ===
+// 사용자 타입 감지에 디바운스 적용
 function debounce(func, wait) {
   let timeout;
   return function executedFunction(...args) {
@@ -1060,7 +934,6 @@ function debounce(func, wait) {
   };
 }
 
-// 사용자 타입 감지에 디바운스 적용
 const debouncedDetectUserType = debounce(detectUserType, 300);
 
 // 아이디 입력 필드에 디바운스된 이벤트 적용

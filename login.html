@@ -223,34 +223,7 @@
         </div>
       </div>
 
-      <!-- 데모 계정 안내 -->
-      <div class="demo-notice">
-        <h4>🔍 데모 계정 안내</h4>
-        <div class="demo-accounts">
-          <div class="demo-section">
-            <h5>👤 고객 계정</h5>
-            <div class="demo-account">
-              <strong>일반 고객:</strong> customer / 1234
-            </div>
-            <div class="demo-account">
-              <strong>테스트:</strong> test / test
-            </div>
-          </div>
-          <div class="demo-section">
-            <h5>👨‍💼 관리자 계정</h5>
-            <div class="demo-account">
-              <strong>시스템 관리자:</strong> admin / admin
-            </div>
-            <div class="demo-account">
-              <strong>주차관리팀:</strong> manager / 1234
-            </div>
-          </div>
-        </div>
-        <p class="demo-tip">💡 아이디 입력 시 자동으로 역할이 감지됩니다!</p>
-      </div>
-    </div>
-  </div>
-
+      
   <!-- 성공 메시지 -->
   <div id="success-modal" class="modal">
     <div class="modal-content" id="success-content">
@@ -274,40 +247,6 @@
     </div>
   </div>
 
- <script>
-    // 간단한 소셜 로그인 처리
-    document.addEventListener('DOMContentLoaded', function() {
-      const kakaoBtn = document.getElementById('kakao-btn');
-      const naverBtn = document.getElementById('naver-btn');
-      
-      kakaoBtn.addEventListener('click', function() {
-        handleSocialLogin('kakao');
-      });
-      
-      naverBtn.addEventListener('click', function() {
-        handleSocialLogin('naver');
-      });
-    });
-
-    function handleSocialLogin(provider) {
-      // 버튼 비활성화
-      const btn = document.getElementById(provider + '-btn');
-      const originalHTML = btn.innerHTML;
-      
-      btn.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <div style="width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.3); border-top: 2px solid #000; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-          연결중...
-        </div>
-      `;
-      btn.disabled = true;
-      
-      // 2초 후 viewport.html로 이동
-      setTimeout(() => {
-        window.location.href = 'viewport.html';
-      }, 2000);
-    }
-  </script>
   <script src="unified-login-script.js"></script>
 </body>
 </html>
