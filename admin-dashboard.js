@@ -1223,3 +1223,31 @@ function closeModal() {
   const modalOverlay = document.getElementById('modalOverlay');
   modalOverlay.classList.remove('active');
 }
+
+// 로그인 정보 확인 (선택사항)
+window.addEventListener('DOMContentLoaded', function() {
+    const loginData = localStorage.getItem('smartParkingLogin') || 
+                     sessionStorage.getItem('smartParkingLogin');
+    
+    if (loginData) {
+        try {
+            const userData = JSON.parse(loginData);
+            console.log('관리자 로그인 정보:', userData);
+            
+            // 필요하면 사용자 이름 표시
+            const userElement = document.getElementById('admin-name');
+            if (userElement) {
+                userElement.textContent = userData.user.name;
+            }
+        } catch (e) {
+            console.log('로그인 정보 없음');
+        }
+    }
+});
+
+// 로그아웃 함수 (필요시 사용)
+function logout() {
+    localStorage.removeItem('smartParkingLogin');
+    sessionStorage.removeItem('smartParkingLogin');
+    window.location.href = 'login.html'; // 로그인 페이지 파일명에 맞게 수정
+}
