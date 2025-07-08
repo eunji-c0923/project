@@ -3,15 +3,17 @@ let currentTab = 'dashboard';
 let sidebarOpen = true;
 let notifications = [];
 let fireDetectionData = [];
-let approvalData = [];
+let parkingData = [];
 let policyData = [];
-let parkingLogData = [];
+let memberData = [];
+let paymentData = [];
+let systemLogs = [];
 
 // 주차 제한 상수
 const PARKING_LIMITS = {
   TOTAL_SPACES: 20,
   MONTHLY_LIMIT: 8,
-  DAILY_LIMIT: 20 // 월주차 + 일주차 포함
+  DAILY_LIMIT: 20
 };
 
 // 주차 현황 데이터
@@ -20,11 +22,11 @@ let parkingStatus = {
   monthlyLimit: 8,
   currentMonthly: 5,
   currentDaily: 8,
-  currentGeneral: 2, // 당일 예약 없이 방문한 차량
-  approvedMonthly: 5, // 승인된 월주차
-  approvedDaily: 8, // 승인된 일주차
-  waitingMonthly: 2, // 대기중인 월주차
-  waitingDaily: 1 // 대기중인 일주차
+  currentGeneral: 2,
+  approvedMonthly: 5,
+  approvedDaily: 8,
+  waitingMonthly: 2,
+  waitingDaily: 1
 };
 
 // 샘플 데이터
@@ -35,6 +37,7 @@ const sampleFireData = [
     location: '1층 주차장',
     result: '화재',
     confidence: '87.5%',
+    adminJudgment: '화재 확인',
     alertStatus: '전송 완료',
     alertTime: '2025-07-01 10:15',
     notes: '라이터에 발화함'
@@ -45,6 +48,7 @@ const sampleFireData = [
     location: '2층 주차장',
     result: '화재',
     confidence: '94.3%',
+    adminJudgment: '화재 확인',
     alertStatus: '전송 완료',
     alertTime: '2025-07-01 10:32',
     notes: '불꽃 명확히 포착'
@@ -55,13 +59,14 @@ const sampleFireData = [
     location: '3층 주차장',
     result: '정상',
     confidence: '99.1%',
+    adminJudgment: '정상',
     alertStatus: '전송 안함',
     alertTime: '-',
     notes: '오탐 가능성 있음'
   }
 ];
 
-const sampleApprovalData = [
+const sampleParkingData = [
   {
     id: 'req20250701001',
     carNumber: '555허 5556',
@@ -124,46 +129,72 @@ const sampleApprovalData = [
   }
 ];
 
-const sampleParkingLogData = [
+const sampleMemberData = [
   {
-    no: 1,
-    carNo: '12가3456',
-    owner: '김민수',
-    parkingType: '월주차',
-    inTime: '2025-07-01 8:02',
-    outTime: ''
+    id: 'M001',
+    name: '김민수',
+    carNumber: '12가3456',
+    carModel: 'BMW 520i',
+    phone: '010-1234-5678',
+    email: 'kim@example.com',
+    joinDate: '2025-01-15',
+    status: '활성',
+    membership: '월주차'
   },
   {
-    no: 2,
-    carNo: '22나9845',
-    owner: '이지은',
-    parkingType: '일반',
-    inTime: '2025-07-01 8:15',
-    outTime: '2025-07-01 10:47'
+    id: 'M002',
+    name: '이지은',
+    carNumber: '22나9845',
+    carModel: 'Mercedes C200',
+    phone: '010-2345-6789',
+    email: 'lee@example.com',
+    joinDate: '2025-02-20',
+    status: '활성',
+    membership: '일반'
   },
   {
-    no: 3,
-    carNo: '31다8392',
-    owner: '박정훈',
-    parkingType: '일주차',
-    inTime: '2025-07-01 7:43',
-    outTime: '2025-07-01 12:01'
+    id: 'M003',
+    name: '박정훈',
+    carNumber: '31다8392',
+    carModel: 'Audi A4',
+    phone: '010-3456-7890',
+    email: 'park@example.com',
+    joinDate: '2025-03-10',
+    status: '비활성',
+    membership: '월주차'
+  }
+];
+
+const samplePaymentData = [
+  {
+    id: 'PAY001',
+    carNumber: '12가3456',
+    payer: '김민수',
+    type: '월주차',
+    amount: '100,000원',
+    method: '카드',
+    time: '2025-07-01 09:30',
+    status: '완료'
   },
   {
-    no: 4,
-    carNo: '56라5521',
-    owner: '장예린',
-    parkingType: '월주차',
-    inTime: '2025-06-30 18:05',
-    outTime: ''
+    id: 'PAY002',
+    carNumber: '22나9845',
+    payer: '이지은',
+    type: '시간주차',
+    amount: '3,600원',
+    method: '카카오페이',
+    time: '2025-07-01 14:20',
+    status: '완료'
   },
   {
-    no: 5,
-    carNo: '19마4822',
-    owner: '조한결',
-    parkingType: '일반',
-    inTime: '2025-07-01 9:12',
-    outTime: ''
+    id: 'PAY003',
+    carNumber: '31다8392',
+    payer: '박정훈',
+    type: '일주차',
+    amount: '12,000원',
+    method: '카드',
+    time: '2025-07-01 08:15',
+    status: '실패'
   }
 ];
 
@@ -229,47 +260,38 @@ function setupEventListeners() {
 
 // 주차 현황 업데이트
 function updateParkingStatus() {
-  // 현재 승인된 월주차 수 계산
-  const approvedMonthly = approvalData.filter(item => 
+  const approvedMonthly = parkingData.filter(item => 
     item.type === '월주차' && item.status === '승인'
   ).length;
   
-  // 현재 승인된 일주차 수 계산
-  const approvedDaily = approvalData.filter(item => 
+  const approvedDaily = parkingData.filter(item => 
     item.type === '일주차' && item.status === '승인'
   ).length;
   
-  // 대기 중인 월주차 수 계산
-  const waitingMonthly = approvalData.filter(item => 
+  const waitingMonthly = parkingData.filter(item => 
     item.type === '월주차' && item.status === '미승인'
   ).length;
   
-  // 대기 중인 일주차 수 계산
-  const waitingDaily = approvalData.filter(item => 
+  const waitingDaily = parkingData.filter(item => 
     item.type === '일주차' && item.status === '미승인'
   ).length;
   
-  // 주차 현황 업데이트
   parkingStatus.approvedMonthly = approvedMonthly;
   parkingStatus.approvedDaily = approvedDaily;
   parkingStatus.waitingMonthly = waitingMonthly;
   parkingStatus.waitingDaily = waitingDaily;
   
-  // 사용 가능한 공간 계산
   const totalUsed = approvedMonthly + approvedDaily + parkingStatus.currentGeneral;
   parkingStatus.availableSpaces = Math.max(0, PARKING_LIMITS.TOTAL_SPACES - totalUsed);
   
-  // UI 업데이트
   updateElementIfExists('currentMonthly', `${approvedMonthly}대`);
   updateElementIfExists('currentDaily', `${approvedDaily}대`);
   updateElementIfExists('availableSpaces', `${parkingStatus.availableSpaces}대`);
   updateElementIfExists('monthlyParkingCount', `${approvedMonthly}/${PARKING_LIMITS.MONTHLY_LIMIT}`);
   
-  // 통계 업데이트
   updateElementIfExists('waitingCount', waitingMonthly + waitingDaily);
   updateElementIfExists('approvedCount', approvedMonthly + approvedDaily);
   
-  // 용량 경고 표시
   displayCapacityWarning();
 }
 
@@ -282,18 +304,15 @@ function displayCapacityWarning() {
   
   const warnings = [];
   
-  // 월주차 한도 초과 경고
   if (parkingStatus.approvedMonthly >= PARKING_LIMITS.MONTHLY_LIMIT) {
     warnings.push(`월주차 한도 초과: ${parkingStatus.approvedMonthly}/${PARKING_LIMITS.MONTHLY_LIMIT}대`);
   }
   
-  // 전체 주차 공간 부족 경고
   const totalUsed = parkingStatus.approvedMonthly + parkingStatus.approvedDaily + parkingStatus.currentGeneral;
   if (totalUsed >= PARKING_LIMITS.TOTAL_SPACES) {
     warnings.push(`전체 주차 공간 부족: ${totalUsed}/${PARKING_LIMITS.TOTAL_SPACES}대`);
   }
   
-  // 경고 메시지가 있으면 표시
   if (warnings.length > 0) {
     const warningHtml = `
       <div class="capacity-warning">
@@ -302,9 +321,9 @@ function displayCapacityWarning() {
       </div>
     `;
     
-    const pmsSection = document.getElementById('pms-section');
-    if (pmsSection) {
-      pmsSection.insertAdjacentHTML('afterbegin', warningHtml);
+    const parkingSection = document.getElementById('parking-management-section');
+    if (parkingSection) {
+      parkingSection.insertAdjacentHTML('afterbegin', warningHtml);
     }
   }
 }
@@ -317,13 +336,11 @@ function canApproveRequest(requestData) {
   };
   
   if (requestData.type === '월주차') {
-    // 월주차는 8대 초과 불가
     if (parkingStatus.approvedMonthly >= PARKING_LIMITS.MONTHLY_LIMIT) {
       result.reason = '월주차 한도 초과 (8대 제한)';
       return result;
     }
   } else if (requestData.type === '일주차') {
-    // 일주차는 월주차 포함하여 20대 이상 불가
     const totalApproved = parkingStatus.approvedMonthly + parkingStatus.approvedDaily;
     if (totalApproved >= PARKING_LIMITS.DAILY_LIMIT) {
       result.reason = '전체 주차 한도 초과 (20대 제한)';
@@ -331,7 +348,6 @@ function canApproveRequest(requestData) {
     }
   }
   
-  // 전체 주차 공간 체크
   const totalUsed = parkingStatus.approvedMonthly + parkingStatus.approvedDaily + parkingStatus.currentGeneral;
   if (totalUsed >= PARKING_LIMITS.TOTAL_SPACES) {
     result.reason = '주차 공간 부족';
@@ -342,43 +358,25 @@ function canApproveRequest(requestData) {
   return result;
 }
 
-// 당일 입차 가능 여부 검증
-function canEnterToday() {
-  const reservedSpaces = parkingStatus.approvedMonthly + parkingStatus.approvedDaily;
-  const availableForGeneral = PARKING_LIMITS.TOTAL_SPACES - reservedSpaces;
-  
-  return {
-    canEnter: parkingStatus.currentGeneral < availableForGeneral,
-    availableSpaces: Math.max(0, availableForGeneral - parkingStatus.currentGeneral),
-    reason: parkingStatus.currentGeneral >= availableForGeneral ? 
-      '예약분을 제외한 주차 공간 부족' : ''
-  };
-}
-
 // 샘플 데이터 로드
 function loadSampleData() {
   fireDetectionData = [...sampleFireData];
-  approvalData = [...sampleApprovalData];
-  parkingLogData = [...sampleParkingLogData];
+  parkingData = [...sampleParkingData];
+  memberData = [...sampleMemberData];
+  paymentData = [...samplePaymentData];
   
   renderFireTable();
-  renderApprovalTable();
-  renderParkingLogTable();
+  renderParkingTable();
+  renderMemberTable();
+  renderPaymentTable();
   updateParkingStatus();
 }
 
 // 실시간 업데이트 시작
 function startRealTimeUpdates() {
-  // 1초마다 시간 업데이트
   setInterval(updateCurrentTime, 1000);
-  
-  // 5초마다 CCTV 타임스탬프 업데이트
   setInterval(updateCCTVTimestamps, 5000);
-  
-  // 30초마다 통계 업데이트
   setInterval(updateStats, 30000);
-  
-  // 10초마다 주차 현황 업데이트
   setInterval(updateParkingStatus, 10000);
 }
 
@@ -387,13 +385,11 @@ function updateCurrentTime() {
   const now = new Date();
   const timeString = now.toLocaleString('ko-KR');
   
-  // 헤더의 현재 시간 업데이트
   const currentDateElement = document.getElementById('currentDate');
   if (currentDateElement) {
     currentDateElement.textContent = `작성일: ${timeString}`;
   }
   
-  // 마지막 화재 확인 시간 업데이트
   const lastFireCheck = document.getElementById('lastFireCheck');
   if (lastFireCheck) {
     lastFireCheck.textContent = '방금 전';
@@ -415,7 +411,6 @@ function updateCCTVTimestamps() {
 
 // 통계 업데이트
 function updateStats() {
-  // 시뮬레이션된 실시간 데이터
   const stats = {
     fireAlerts: Math.floor(Math.random() * 3),
     pendingApprovals: parkingStatus.waitingMonthly + parkingStatus.waitingDaily,
@@ -423,7 +418,6 @@ function updateStats() {
     occupancyRate: Math.round(((PARKING_LIMITS.TOTAL_SPACES - parkingStatus.availableSpaces) / PARKING_LIMITS.TOTAL_SPACES) * 100) + '%'
   };
   
-  // DOM 업데이트
   updateElementIfExists('fireAlerts', stats.fireAlerts);
   updateElementIfExists('pendingApprovals', stats.pendingApprovals);
   updateElementIfExists('todayRevenue', stats.todayRevenue);
@@ -449,48 +443,61 @@ function setActiveTab(activeTab) {
 function switchTab(tabName) {
   currentTab = tabName;
   
-  // 화면 ID 업데이트
   const screenIds = {
     'dashboard': 'Dashboard_001',
-    'fire-detection': 'FireDetectionListView_001',
-    'pms': 'PMSRequestListview_001',
-    'parking-fee': 'PMSParkingFeePolicy_001'
+    'parking-management': 'ParkingManagement_ListView_001',
+    'fee-management': 'FeeManagement_001',
+    'fire-management': 'FireManagement_001',
+    'member-management': 'MemberManagement_001',
+    'system-logs': 'SystemLogs_001'
   };
   
   const screenNames = {
     'dashboard': '관리자 통합 대시보드',
-    'fire-detection': '주차관리시스템_화재 감지 ListView',
-    'pms': '주차 관리 ListView',
-    'parking-fee': '주차요금 정책 관리 ListView'
+    'parking-management': '주차 관리 ListView',
+    'fee-management': '요금 관리',
+    'fire-management': '화재 관리',
+    'member-management': '회원 관리',
+    'system-logs': '시스템 로그 관리'
   };
   
   updateElementIfExists('currentScreen', `화면ID: ${screenIds[tabName] || 'Dashboard_001'}`);
   updateElementIfExists('screenName', `화면명: ${screenNames[tabName] || '관리자 통합 대시보드'}`);
   
-  // 섹션 표시
   if (tabName === 'dashboard') {
     showSection('dashboard-overview');
-  } else if (tabName === 'fire-detection') {
-    showSection('fire-detection-section');
-    renderFireTable();
-  } else if (tabName === 'pms') {
-    showSection('pms-section');
-    renderApprovalTable();
-    updateParkingStatus();
-  } else if (tabName === 'parking-fee') {
-    showSection('parking-fee-section');
+  } else {
+    showSection(`${tabName}-section`);
+    
+    // 각 탭에 맞는 데이터 렌더링
+    switch(tabName) {
+      case 'parking-management':
+        renderParkingTable();
+        updateParkingStatus();
+        break;
+      case 'fire-management':
+        renderFireTable();
+        break;
+      case 'member-management':
+        renderMemberTable();
+        break;
+      case 'fee-management':
+        renderPaymentTable();
+        break;
+      case 'system-logs':
+        renderSystemLogsTable();
+        break;
+    }
   }
 }
 
 // 섹션 표시
 function showSection(sectionId) {
-  // 모든 섹션 숨기기
   const sections = document.querySelectorAll('.content-section, .dashboard-overview');
   sections.forEach(section => {
     section.style.display = 'none';
   });
   
-  // 선택된 섹션 표시
   const targetSection = document.getElementById(sectionId);
   if (targetSection) {
     targetSection.style.display = 'block';
@@ -502,31 +509,32 @@ function loadPage(pageName) {
   console.log(`페이지 로드: ${pageName}`);
   
   switch(pageName) {
-    case 'fire-detection':
-      setActiveTab(document.querySelector('[data-tab="fire-detection"]'));
-      switchTab('fire-detection');
-      break;
-    case 'fire-detail':
-      showFireDetailModal();
-      break;
-    case 'fire-alert':
-      showNotifications();
-      break;
-    case 'cctv':
-      showSection('cctv-section');
-      break;
-    case 'parking-requests':
+    case 'parking-status':
     case 'parking-approval':
-      setActiveTab(document.querySelector('[data-tab="pms"]'));
-      switchTab('pms');
-      break;
-    case 'parking-log':
-      showSection('parking-log-section');
-      renderParkingLogTable();
+    case 'parking-reservation':
+      setActiveTab(document.querySelector('[data-tab="parking-management"]'));
+      switchTab('parking-management');
       break;
     case 'fee-policy':
-      setActiveTab(document.querySelector('[data-tab="parking-fee"]'));
-      switchTab('parking-fee');
+    case 'payment-history':
+      setActiveTab(document.querySelector('[data-tab="fee-management"]'));
+      switchTab('fee-management');
+      break;
+    case 'fire-detection':
+    case 'cctv-monitoring':
+    case 'fire-judgment':
+      setActiveTab(document.querySelector('[data-tab="fire-management"]'));
+      switchTab('fire-management');
+      break;
+    case 'member-list':
+    case 'vehicle-management':
+      setActiveTab(document.querySelector('[data-tab="member-management"]'));
+      switchTab('member-management');
+      break;
+    case 'system-status':
+    case 'system-logs':
+      setActiveTab(document.querySelector('[data-tab="system-logs"]'));
+      switchTab('system-logs');
       break;
     default:
       console.log(`알 수 없는 페이지: ${pageName}`);
@@ -545,11 +553,10 @@ function renderFireTable() {
     tableBody.appendChild(row);
   });
   
-  // 빈 행 추가 (일관된 레이아웃을 위해)
   const remainingRows = Math.max(0, 10 - fireDetectionData.length);
   for (let i = 0; i < remainingRows; i++) {
     const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = '<td colspan="8">&nbsp;</td>';
+    emptyRow.innerHTML = '<td colspan="10">&nbsp;</td>';
     emptyRow.style.height = '45px';
     tableBody.appendChild(emptyRow);
   }
@@ -568,28 +575,29 @@ function createFireTableRow(item) {
     <td>${item.location}</td>
     <td><span class="${resultClass}">${item.result}</span></td>
     <td>${item.confidence}</td>
+    <td>${item.adminJudgment}</td>
     <td>${item.alertStatus}</td>
     <td>${item.alertTime}</td>
     <td>${item.notes}</td>
+    <td><button class="action-btn" onclick="editFireRecord('${item.id}')">수정</button></td>
   `;
   
   return row;
 }
 
-// 승인 관리 테이블 렌더링
-function renderApprovalTable() {
-  const tableBody = document.getElementById('approvalTable');
+// 주차 관리 테이블 렌더링
+function renderParkingTable() {
+  const tableBody = document.getElementById('parkingTable');
   if (!tableBody) return;
   
   tableBody.innerHTML = '';
   
-  approvalData.forEach(item => {
-    const row = createApprovalTableRow(item);
+  parkingData.forEach(item => {
+    const row = createParkingTableRow(item);
     tableBody.appendChild(row);
   });
   
-  // 빈 행 추가
-  const remainingRows = Math.max(0, 10 - approvalData.length);
+  const remainingRows = Math.max(0, 10 - parkingData.length);
   for (let i = 0; i < remainingRows; i++) {
     const emptyRow = document.createElement('tr');
     emptyRow.innerHTML = '<td colspan="12">&nbsp;</td>';
@@ -598,14 +606,13 @@ function renderApprovalTable() {
   }
 }
 
-// 승인 테이블 행 생성
-function createApprovalTableRow(item) {
+// 주차 테이블 행 생성
+function createParkingTableRow(item) {
   const row = document.createElement('tr');
   
   const statusClass = item.status === '승인' ? 'status-approved' : 'status-waiting';
   const paymentClass = item.paymentStatus === '결재완료' ? 'status-payment-completed' : 'status-payment-pending';
   
-  // 승인 가능 여부 확인
   const canApprove = canApproveRequest(item);
   
   let actionButton;
@@ -635,42 +642,158 @@ function createApprovalTableRow(item) {
   return row;
 }
 
-// 입출차 로그 테이블 렌더링
-function renderParkingLogTable() {
-  const tableBody = document.getElementById('parkingLogTable');
+// 회원 관리 테이블 렌더링
+function renderMemberTable() {
+  const tableBody = document.getElementById('memberTable');
   if (!tableBody) return;
   
   tableBody.innerHTML = '';
   
-  parkingLogData.forEach(item => {
-    const row = createParkingLogTableRow(item);
+  memberData.forEach(item => {
+    const row = createMemberTableRow(item);
     tableBody.appendChild(row);
   });
   
-  // 빈 행 추가
-  const remainingRows = Math.max(0, 10 - parkingLogData.length);
+  const remainingRows = Math.max(0, 10 - memberData.length);
   for (let i = 0; i < remainingRows; i++) {
     const emptyRow = document.createElement('tr');
-    emptyRow.innerHTML = '<td colspan="6">&nbsp;</td>';
+    emptyRow.innerHTML = '<td colspan="10">&nbsp;</td>';
     emptyRow.style.height = '45px';
     tableBody.appendChild(emptyRow);
   }
 }
 
-// 입출차 로그 테이블 행 생성
-function createParkingLogTableRow(item) {
+// 회원 테이블 행 생성
+function createMemberTableRow(item) {
   const row = document.createElement('tr');
   
+  const statusClass = item.status === '활성' ? 'status-approved' : 'status-waiting';
+  
   row.innerHTML = `
-    <td>${item.no}</td>
-    <td>${item.carNo}</td>
-    <td>${item.owner}</td>
-    <td>${item.parkingType}</td>
-    <td>${item.inTime}</td>
-    <td>${item.outTime || '-'}</td>
+    <td>${item.id}</td>
+    <td>${item.name}</td>
+    <td>${item.carNumber}</td>
+    <td>${item.carModel}</td>
+    <td>${item.phone}</td>
+    <td>${item.email}</td>
+    <td>${item.joinDate}</td>
+    <td><span class="${statusClass}">${item.status}</span></td>
+    <td>${item.membership}</td>
+    <td>
+      <button class="action-btn" onclick="editMember('${item.id}')">수정</button>
+      <button class="action-btn danger" onclick="deleteMember('${item.id}')">삭제</button>
+    </td>
   `;
   
   return row;
+}
+
+// 결제 내역 테이블 렌더링
+function renderPaymentTable() {
+  const tableBody = document.getElementById('paymentTable');
+  if (!tableBody) return;
+  
+  tableBody.innerHTML = '';
+  
+  paymentData.forEach(item => {
+    const row = createPaymentTableRow(item);
+    tableBody.appendChild(row);
+  });
+  
+  const remainingRows = Math.max(0, 10 - paymentData.length);
+  for (let i = 0; i < remainingRows; i++) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = '<td colspan="9">&nbsp;</td>';
+    emptyRow.style.height = '45px';
+    tableBody.appendChild(emptyRow);
+  }
+}
+
+// 결제 테이블 행 생성
+function createPaymentTableRow(item) {
+  const row = document.createElement('tr');
+  
+  const statusClass = item.status === '완료' ? 'status-approved' : 'status-fire';
+  
+  row.innerHTML = `
+    <td>${item.id}</td>
+    <td>${item.carNumber}</td>
+    <td>${item.payer}</td>
+    <td>${item.type}</td>
+    <td>${item.amount}</td>
+    <td>${item.method}</td>
+    <td>${item.time}</td>
+    <td><span class="${statusClass}">${item.status}</span></td>
+    <td>
+      <button class="action-btn" onclick="viewPaymentDetail('${item.id}')">상세</button>
+    </td>
+  `;
+  
+  return row;
+}
+
+// 시스템 로그 테이블 렌더링
+function renderSystemLogsTable() {
+  const tableBody = document.getElementById('systemLogsTable');
+  if (!tableBody) return;
+  
+  tableBody.innerHTML = '';
+  
+  // 샘플 시스템 로그 데이터
+  const sampleLogs = [
+    {
+      id: 'LOG001',
+      time: '2025-07-01 14:30:25',
+      level: 'INFO',
+      module: '주차관리',
+      message: '시스템 정상 작동 중',
+      user: 'System',
+      ip: '127.0.0.1',
+      status: '정상'
+    },
+    {
+      id: 'LOG002',
+      time: '2025-07-01 14:25:10',
+      level: 'WARNING',
+      module: '화재감지',
+      message: 'CCTV 4번 연결 불안정',
+      user: 'System',
+      ip: '127.0.0.1',
+      status: '경고'
+    },
+    {
+      id: 'LOG003',
+      time: '2025-07-01 14:20:05',
+      level: 'ERROR',
+      module: '결제시스템',
+      message: '결제 서버 응답 지연',
+      user: 'System',
+      ip: '127.0.0.1',
+      status: '오류'
+    }
+  ];
+  
+  sampleLogs.forEach(item => {
+    const row = document.createElement('tr');
+    
+    let levelClass = 'status-normal';
+    if (item.level === 'WARNING') levelClass = 'status-waiting';
+    if (item.level === 'ERROR') levelClass = 'status-fire';
+    
+    row.innerHTML = `
+      <td>${item.id}</td>
+      <td>${item.time}</td>
+      <td><span class="${levelClass}">${item.level}</span></td>
+      <td>${item.module}</td>
+      <td>${item.message}</td>
+      <td>${item.user}</td>
+      <td>${item.ip}</td>
+      <td>${item.status}</td>
+      <td><button class="action-btn" onclick="viewLogDetail('${item.id}')">상세</button></td>
+    `;
+    
+    tableBody.appendChild(row);
+  });
 }
 
 // 활성 필터 설정
@@ -687,12 +810,12 @@ function applyFilters() {
   
   const filterValue = activeFilter.dataset.filter;
   
-  if (currentTab === 'fire-detection') {
+  if (currentTab === 'fire-management') {
     applyFireFilters(filterValue);
-  } else if (currentTab === 'pms') {
-    applyApprovalFilters(filterValue);
-  } else if (currentTab === 'parking-log') {
-    applyParkingLogFilters(filterValue);
+  } else if (currentTab === 'parking-management') {
+    applyParkingFilters(filterValue);
+  } else if (currentTab === 'member-management') {
+    applyMemberFilters(filterValue);
   }
 }
 
@@ -704,19 +827,16 @@ function applyFireFilters(filter = null) {
   
   let filteredData = [...sampleFireData];
   
-  // 결과 필터
   if (activeFilter === 'fire') {
     filteredData = filteredData.filter(item => item.result === '화재');
   } else if (activeFilter === 'normal') {
     filteredData = filteredData.filter(item => item.result === '정상');
   }
   
-  // 위치 필터
   if (locationFilter) {
     filteredData = filteredData.filter(item => item.location === locationFilter);
   }
   
-  // 날짜 필터
   if (dateFilter) {
     filteredData = filteredData.filter(item => item.time.startsWith(dateFilter));
   }
@@ -725,39 +845,47 @@ function applyFireFilters(filter = null) {
   renderFireTable();
 }
 
-// 승인 관리 필터 적용
-function applyApprovalFilters(filter = null) {
+// 주차 관리 필터 적용
+function applyParkingFilters(filter = null) {
   const activeFilter = filter || document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
   
-  let filteredData = [...sampleApprovalData];
+  let filteredData = [...sampleParkingData];
   
   if (activeFilter === 'waiting') {
     filteredData = filteredData.filter(item => item.status === '미승인');
   } else if (activeFilter === 'approved') {
     filteredData = filteredData.filter(item => item.status === '승인');
+  } else if (activeFilter === 'monthly') {
+    filteredData = filteredData.filter(item => item.type === '월주차');
+  } else if (activeFilter === 'daily') {
+    filteredData = filteredData.filter(item => item.type === '일주차');
   }
   
-  approvalData = filteredData;
-  renderApprovalTable();
+  parkingData = filteredData;
+  renderParkingTable();
 }
 
-// 입출차 로그 필터 적용
-function applyParkingLogFilters(filter = null) {
+// 회원 관리 필터 적용
+function applyMemberFilters(filter = null) {
   const activeFilter = filter || document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
   
-  let filteredData = [...sampleParkingLogData];
+  let filteredData = [...sampleMemberData];
   
-  if (activeFilter !== 'all') {
-    filteredData = filteredData.filter(item => item.parkingType === activeFilter);
+  if (activeFilter === 'active') {
+    filteredData = filteredData.filter(item => item.status === '활성');
+  } else if (activeFilter === 'inactive') {
+    filteredData = filteredData.filter(item => item.status === '비활성');
+  } else if (activeFilter === 'monthly') {
+    filteredData = filteredData.filter(item => item.membership === '월주차');
   }
   
-  parkingLogData = filteredData;
-  renderParkingLogTable();
+  memberData = filteredData;
+  renderMemberTable();
 }
 
 // 전체 선택 토글
 function toggleSelectAll(checked) {
-  const checkboxes = document.querySelectorAll('#approvalTable input[type="checkbox"]:not(:disabled)');
+  const checkboxes = document.querySelectorAll('#parkingTable input[type="checkbox"]:not(:disabled)');
   checkboxes.forEach(checkbox => {
     checkbox.checked = checked;
   });
@@ -804,6 +932,7 @@ function showFireDetail(logId) {
           </div>
           <div>
             <strong>AI 판별 결과:</strong> <span class="${fireItem.result === '화재' ? 'status-fire' : 'status-normal'}">${fireItem.result}</span><br>
+            <strong>관리자 판단:</strong> ${fireItem.adminJudgment}<br>
             <strong>알림 전송:</strong> ${fireItem.alertTime}
           </div>
         </div>
@@ -866,22 +995,6 @@ function showUserAlert() {
               <td>010-3456-7890</td>
               <td><span style="color: #2f855a; font-weight: 600;">주차중</span></td>
             </tr>
-            <tr>
-              <td><input type="checkbox" class="user-checkbox"></td>
-              <td>333가 3333</td>
-              <td>김연아</td>
-              <td>일주차</td>
-              <td>010-4567-8901</td>
-              <td><span style="color: #2f855a; font-weight: 600;">주차중</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" class="user-checkbox"></td>
-              <td>888나 8888</td>
-              <td>박지성</td>
-              <td>월주차</td>
-              <td>010-5678-9012</td>
-              <td><span style="color: #e53e3e; font-weight: 600;">부재</span></td>
-            </tr>
           </tbody>
         </table>
         
@@ -912,7 +1025,6 @@ function sendUserAlert() {
     return;
   }
   
-  // 선택된 사용자들의 정보 수집
   const selectedUsers = [];
   checkedUsers.forEach(checkbox => {
     const row = checkbox.closest('tr');
@@ -924,7 +1036,6 @@ function sendUserAlert() {
   
   closeModal();
   
-  // 카카오톡 메시지 전송 시뮬레이션
   setTimeout(() => {
     const message = `${selectedUsers.length}명에게 화재 알림이 전송되었습니다.\n\n` +
                    `전송 메시지: "현재 회원님이 사용중이신 유료주차장에 화재가 발생하였습니다. 안전을 위해 신속히 대피해 주세요."\n\n` +
@@ -951,33 +1062,28 @@ function closeAlert() {
 
 // 승인 처리
 function approveRequest(requestId) {
-  const request = approvalData.find(item => item.id === requestId);
+  const request = parkingData.find(item => item.id === requestId);
   if (!request) return;
   
-  // 승인 가능 여부 다시 확인
   const canApprove = canApproveRequest(request);
   if (!canApprove.canApprove) {
     showAlert(`승인 불가: ${canApprove.reason}`);
     return;
   }
   
-  // 승인 처리
   request.status = '승인';
   request.approvalDate = new Date().toISOString().split('T')[0];
   request.paymentStatus = '결재대기';
   
-  // 주차 현황 업데이트
   updateParkingStatus();
-  
-  // 테이블 재렌더링
-  renderApprovalTable();
+  renderParkingTable();
   
   showAlert(`${requestId} 요청이 승인되었습니다.`);
 }
 
 // 일괄 승인
 function bulkApproval() {
-  const checkedBoxes = document.querySelectorAll('#approvalTable input[type="checkbox"]:checked:not(:disabled)');
+  const checkedBoxes = document.querySelectorAll('#parkingTable input[type="checkbox"]:checked:not(:disabled)');
   if (checkedBoxes.length === 0) {
     showAlert('승인할 항목을 선택해주세요.');
     return;
@@ -989,7 +1095,7 @@ function bulkApproval() {
   
   checkedBoxes.forEach(checkbox => {
     const requestId = checkbox.value;
-    const request = approvalData.find(item => item.id === requestId);
+    const request = parkingData.find(item => item.id === requestId);
     
     if (request && request.status === '미승인') {
       const canApprove = canApproveRequest(request);
@@ -1005,11 +1111,8 @@ function bulkApproval() {
     }
   });
   
-  // 주차 현황 업데이트
   updateParkingStatus();
-  
-  // 테이블 재렌더링
-  renderApprovalTable();
+  renderParkingTable();
   
   let message = `일괄 승인 완료\n승인: ${successCount}개`;
   if (failCount > 0) {
@@ -1021,7 +1124,7 @@ function bulkApproval() {
 
 // 일괄 거절
 function bulkReject() {
-  const checkedBoxes = document.querySelectorAll('#approvalTable input[type="checkbox"]:checked:not(:disabled)');
+  const checkedBoxes = document.querySelectorAll('#parkingTable input[type="checkbox"]:checked:not(:disabled)');
   if (checkedBoxes.length === 0) {
     showAlert('거절할 항목을 선택해주세요.');
     return;
@@ -1030,7 +1133,7 @@ function bulkReject() {
   let rejectCount = 0;
   checkedBoxes.forEach(checkbox => {
     const requestId = checkbox.value;
-    const request = approvalData.find(item => item.id === requestId);
+    const request = parkingData.find(item => item.id === requestId);
     
     if (request && request.status === '미승인') {
       request.status = '거절';
@@ -1039,26 +1142,10 @@ function bulkReject() {
     }
   });
   
-  // 주차 현황 업데이트
   updateParkingStatus();
-  
-  // 테이블 재렌더링
-  renderApprovalTable();
+  renderParkingTable();
   
   showAlert(`${rejectCount}개 항목이 일괄 거절되었습니다.`);
-}
-
-// 당일 입차 시뮬레이션
-function simulateGeneralEntry() {
-  const entryCheck = canEnterToday();
-  
-  if (entryCheck.canEnter) {
-    parkingStatus.currentGeneral++;
-    updateParkingStatus();
-    showAlert(`당일 입차 승인\n현재 일반 주차: ${parkingStatus.currentGeneral}대\n남은 공간: ${entryCheck.availableSpaces - 1}대`);
-  } else {
-    showAlert(`당일 입차 거부\n사유: ${entryCheck.reason}`);
-  }
 }
 
 // 정책 편집
@@ -1140,6 +1227,10 @@ function toggleFullscreen() {
   showAlert('전체화면 모드로 전환합니다.');
 }
 
+function recordAll() {
+  showAlert('모든 CCTV 녹화를 시작했습니다.');
+}
+
 // 기타 함수들
 function exportFireLog() {
   showAlert('화재 감지 로그를 내보냅니다.');
@@ -1150,13 +1241,77 @@ function refreshFireLog() {
   renderFireTable();
 }
 
-function exportParkingLog() {
-  showAlert('입출차 로그를 내보냅니다.');
+function addManualFireLog() {
+  showAlert('수동 화재 기록 추가 기능입니다.');
 }
 
-function refreshParkingLog() {
-  showAlert('입출차 로그를 새로고침합니다.');
-  renderParkingLogTable();
+function editFireRecord(id) {
+  showAlert(`${id} 화재 기록을 수정합니다.`);
+}
+
+function refreshParkingData() {
+  showAlert('주차 관리 데이터를 새로고침합니다.');
+  renderParkingTable();
+  updateParkingStatus();
+}
+
+function addNewMember() {
+  showAlert('새 회원 추가 기능입니다.');
+}
+
+function editMember(id) {
+  showAlert(`회원 ${id}를 수정합니다.`);
+}
+
+function deleteMember(id) {
+  if (confirm('정말 삭제하시겠습니까?')) {
+    showAlert(`회원 ${id}가 삭제되었습니다.`);
+  }
+}
+
+function exportMemberData() {
+  showAlert('회원 데이터를 내보냅니다.');
+}
+
+function refreshMemberData() {
+  showAlert('회원 데이터를 새로고침합니다.');
+  renderMemberTable();
+}
+
+function exportPaymentData() {
+  showAlert('결제 데이터를 내보냅니다.');
+}
+
+function refreshPaymentData() {
+  showAlert('결제 데이터를 새로고침합니다.');
+  renderPaymentTable();
+}
+
+function exportPolicyData() {
+  showAlert('정책 데이터를 내보냅니다.');
+}
+
+function viewPaymentDetail(id) {
+  showAlert(`결제 ${id} 상세 정보를 표시합니다.`);
+}
+
+function exportSystemLogs() {
+  showAlert('시스템 로그를 내보냅니다.');
+}
+
+function refreshSystemLogs() {
+  showAlert('시스템 로그를 새로고침합니다.');
+  renderSystemLogsTable();
+}
+
+function clearOldLogs() {
+  if (confirm('오래된 로그를 삭제하시겠습니까?')) {
+    showAlert('오래된 로그가 삭제되었습니다.');
+  }
+}
+
+function viewLogDetail(id) {
+  showAlert(`로그 ${id} 상세 정보를 표시합니다.`);
 }
 
 function changePage(direction) {
@@ -1171,9 +1326,15 @@ function showSettings() {
   showAlert('설정 화면을 표시합니다.');
 }
 
+function showAdminRegister() {
+  showAlert('관리자 등록 화면을 표시합니다.');
+}
+
 function logout() {
   if (confirm('로그아웃 하시겠습니까?')) {
     showAlert('로그아웃되었습니다.');
+    // 실제 로그아웃 로직
+    // window.location.href = 'login.html';
   }
 }
 
@@ -1184,13 +1345,23 @@ function saveCurrentSettings() {
 function refreshCurrentSection() {
   showAlert('현재 화면을 새로고침합니다.');
   
-  if (currentTab === 'fire-detection') {
-    renderFireTable();
-  } else if (currentTab === 'pms') {
-    renderApprovalTable();
-    updateParkingStatus();
-  } else if (currentTab === 'parking-log') {
-    renderParkingLogTable();
+  switch(currentTab) {
+    case 'fire-management':
+      renderFireTable();
+      break;
+    case 'parking-management':
+      renderParkingTable();
+      updateParkingStatus();
+      break;
+    case 'member-management':
+      renderMemberTable();
+      break;
+    case 'fee-management':
+      renderPaymentTable();
+      break;
+    case 'system-logs':
+      renderSystemLogsTable();
+      break;
   }
 }
 
@@ -1202,7 +1373,6 @@ function showModal(content) {
   modalContent.innerHTML = content;
   modalOverlay.classList.add('active');
   
-  // ESC 키로 모달 닫기
   document.addEventListener('keydown', function escHandler(e) {
     if (e.key === 'Escape') {
       closeModal();
@@ -1210,7 +1380,6 @@ function showModal(content) {
     }
   });
   
-  // 오버레이 클릭으로 모달 닫기
   modalOverlay.addEventListener('click', function overlayHandler(e) {
     if (e.target === modalOverlay) {
       closeModal();
@@ -1224,7 +1393,7 @@ function closeModal() {
   modalOverlay.classList.remove('active');
 }
 
-// 로그인 정보 확인 (선택사항)
+// 로그인 정보 확인
 window.addEventListener('DOMContentLoaded', function() {
     const loginData = localStorage.getItem('smartParkingLogin') || 
                      sessionStorage.getItem('smartParkingLogin');
@@ -1234,20 +1403,12 @@ window.addEventListener('DOMContentLoaded', function() {
             const userData = JSON.parse(loginData);
             console.log('관리자 로그인 정보:', userData);
             
-            // 필요하면 사용자 이름 표시
-            const userElement = document.getElementById('admin-name');
-            if (userElement) {
-                userElement.textContent = userData.user.name;
+            const userElement = document.getElementById('adminName');
+            if (userElement && userData.user) {
+                userElement.textContent = userData.user.name || 'Admin';
             }
         } catch (e) {
-            console.log('로그인 정보 없음');
+            console.log('로그인 정보 파싱 오류');
         }
     }
 });
-
-// 로그아웃 함수 (필요시 사용)
-function logout() {
-    localStorage.removeItem('smartParkingLogin');
-    sessionStorage.removeItem('smartParkingLogin');
-    window.location.href = 'login.html'; // 로그인 페이지 파일명에 맞게 수정
-}
