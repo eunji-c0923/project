@@ -13,17 +13,16 @@
         <img src="img/logo.png" alt="스마트파킹 로고" class="logo-image" id="logo-image">
         
       </div>
-      <div class="auth-section" id="auth-section">
-        <!-- 로그인 전 -->
-        <div class="login-buttons" id="login-buttons">
-          <button class="login-btn unified-login" onclick="showUnifiedLogin()">로그인</button>
-          <button class="signup-btn" onclick="showSignupModal()">회원가입</button>
+       <div class="auth-section" id="auth-section">
+        <!-- 로그인 전 - Thymeleaf 조건 처리 -->
+        <div class="login-buttons" id="login-buttons" th:if="${session.loginUser == null}">
+          <a th:href="@{/member/login}" class="login-btn unified-login">로그인</a>
+          <a th:href="@{/member/signup}" class="signup-btn">회원가입</a>
         </div>
         
-        <!-- 로그인 후 -->
-        <div class="user-info" id="user-info" style="display: none;">
-          <span class="welcome" id="welcome-text">환영합니다!</span>
-          <button class="logout-btn" onclick="logout()">로그아웃</button>
+        <!-- 로그인 후 - Thymeleaf 조건 처리 -->
+        <div class="user-info" id="user-info" th:if="${session.loginUser != null}">
+          
         </div>
       </div>
     </div>
@@ -464,27 +463,7 @@
     <p>&copy; 2025 스마트파킹 | 안전하고 효율적인 주차장 관리</p>
   </footer>
 
-  <!-- 로고 이미지 오류 시 폴백 처리 -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const logoImage = document.getElementById('logo-image');
-      
-      // 이미지 로드 실패 시 대체 텍스트로 처리
-      logoImage.addEventListener('error', function() {
-        this.style.display = 'none';
-        // 기존 텍스트 로고 스타일 유지
-      });
-      
-      // 이미지 로드 성공 시 텍스트 숨김
-      logoImage.addEventListener('load', function() {
-        const logoText = document.querySelector('.logo-text');
-        if (logoText) {
-          logoText.style.marginLeft = '10px'; // 이미지와 텍스트 간격
-        }
-      });
-    });
-  </script>
-  
+ 
   <script src="unified-script.js"></script>
 </body>
 </html>
