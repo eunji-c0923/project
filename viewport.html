@@ -4,26 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>스마트파킹 - 고객 대시보드</title>
-  <link rel="stylesheet" href="customer-style.css">
+  <link rel="stylesheet" href="./css/customer-style.css">
   
-  <!-- 서버 사용자 정보를 JavaScript로 전달 (Thymeleaf) -->
-  <script th:if="${#authentication.principal != 'anonymousUser'}" th:inline="javascript">
-    /*<![CDATA[*/
-    window.serverUserData = {
-      user: {
-        id: /*[[${#authentication.principal.id}]]*/ 1,
-        name: /*[[${#authentication.principal.username}]]*/ '김고객',
-        email: /*[[${#authentication.principal.email}]]*/ 'customer@example.com'
-      },
-      role: /*[[${#authentication.principal.authorities[0].authority}]]*/ 'CUSTOMER'
-    };
-    /*]]>*/
-  </script>
-
-  <!-- 비로그인 상태 처리 -->
-  <script th:unless="${#authentication.principal != 'anonymousUser'}">
-    // 비로그인 상태에서는 serverUserData를 정의하지 않음
-  </script>
 </head>
 <body>
   <header>
@@ -279,6 +261,6 @@
    <!-- 공통 라이브러리 먼저 로드 -->
     <script src="common/utils.js"></script> 
   <script src="common/api.js"></script>
-  <script src="dashboard.js"></script>
+  <script src="my-dashboard.js"></script>
 </body>
 </html>
