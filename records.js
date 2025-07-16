@@ -1,5 +1,5 @@
 // ========================================
-// 이용 내역 (records.js) - PDF 명세서 기준
+// 이용 내역 (my-records.js) - PDF 명세서 기준
 // ========================================
 
 let recordsUpdateInterval = null;
@@ -13,8 +13,8 @@ let currentTab = 'usage';
 document.addEventListener('DOMContentLoaded', function() {
   console.log('📊 이용내역 모듈 로드됨');
   
-  // 공통 라이브러리 초기화
-  if (!initializeCommon()) {
+  // 공통 라이브러리 초기화 (가정)
+  if (typeof initializeCommon === 'function' && !initializeCommon()) {
     return;
   }
   
@@ -48,21 +48,8 @@ async function loadUsageHistory(page = currentPage, filters = currentFilters) {
   console.log('📋 이용 내역 로드 중...', { page, filters });
   
   try {
-    // URL 파라미터 구성
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: '20'
-    });
-    
-    // 필터 추가 (PDF 명세서의 요청 파라미터)
-    if (filters.startDate) params.append('startDate', filters.startDate);
-    if (filters.endDate) params.append('endDate', filters.endDate);
-    if (filters.type && filters.type !== 'all') params.append('type', filters.type);
-    if (filters.status && filters.status !== 'all') params.append('status', filters.status);
-    if (filters.keyword) params.append('keyword', filters.keyword);
-    
-    const data = await apiRequest(`/api/usage/history?${params.toString()}`);
-    if (!data) return false;
+    // 실제 API 요청 대신 가상 데이터 사용
+    const data = await getMockUsageData(page, filters);
     
     // 상태 업데이트
     currentPage = page;
@@ -93,6 +80,132 @@ async function loadUsageHistory(page = currentPage, filters = currentFilters) {
   }
 }
 
+// 가상 데이터 생성 함수
+async function getMockUsageData(page, filters) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        summary: {
+          totalCount: 47,
+          totalTime: 156,
+          totalPaid: 342000,
+          averageTime: 3.2
+        },
+        history: [
+          {
+            id: 'U20250702001',
+            date: '2025-07-02',
+            slotName: 'A-15',
+            duration: '2시간 30분',
+            startTime: '09:30',
+            endTime: '12:00',
+            carNumber: '12가3456',
+            fee: 5000,
+            status: '이용중'
+          },
+          {
+            id: 'U20250701001',
+            date: '2025-07-01',
+            slotName: 'A-08',
+            duration: '8시간 30분',
+            startTime: '09:00',
+            endTime: '17:30',
+            carNumber: '12가3456',
+            fee: 15000,
+            status: '완료'
+          },
+          {
+            id: 'U20250628001',
+            date: '2025-06-28',
+            slotName: 'C-12',
+            duration: '2시간 25분',
+            startTime: '13:20',
+            endTime: '15:45',
+            carNumber: '12가3456',
+            fee: 4500,
+            status: '완료'
+          }
+        ],
+        pagination: {
+          currentPage: page,
+          totalPages: 5,
+          totalCount: 47
+        }
+      });
+    }, 500);
+  });
+}
+
+// 가상 결제 데이터
+async function getMockPaymentData(page, filters) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        payments: [
+          {
+            paymentId: 'PAY20250701001',
+            paymentDate: '2025-07-01T17:35:00',
+            amount: 15000,
+            discountAmount: 0,
+            paymentMethod: 'card',
+            status: 'COMPLETED'
+          },
+          {
+            paymentId: 'PAY20250625001',
+            paymentDate: '2025-06-25T12:05:00',
+            amount: 3000,
+            discountAmount: 0,
+            paymentMethod: 'mobile',
+            status: 'COMPLETED'
+          }
+        ],
+        pagination: {
+          currentPage: page,
+          totalPages: 3,
+          totalCount: 25
+        }
+      });
+    }, 500);
+  });
+}
+
+// 가상 예약 데이터
+async function getMockReservationData(page, filters) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        reservations: [
+          {
+            id: 'RES20250703001',
+            reservationDate: '2025-07-03',
+            slotName: 'B-22',
+            startTime: '14:00',
+            endTime: '17:00',
+            carNumber: '12가3456',
+            fee: 6000,
+            status: 'ACTIVE'
+          },
+          {
+            id: 'RES20250701001',
+            reservationDate: '2025-07-01',
+            slotName: 'A-08',
+            startTime: '09:00',
+            endTime: '17:30',
+            carNumber: '12가3456',
+            fee: 15000,
+            status: 'COMPLETED'
+          }
+        ],
+        pagination: {
+          currentPage: page,
+          totalPages: 2,
+          totalCount: 15
+        }
+      });
+    }, 500);
+  });
+}
+
 // PDF 명세서에 따른 통계 정보 업데이트
 function updateUsageSummary(summary) {
   // 총 이용횟수 (totalCount)
@@ -118,7 +231,7 @@ function updateUsageSummary(summary) {
 
 // PDF 명세서에 따른 이용 내역 목록 업데이트
 function updateUsageHistoryList(history) {
-  const historyContainer = document.querySelector('.history-list, .usage-history');
+  const historyContainer = document.querySelector('.usage-history, .history-list');
   if (!historyContainer) return;
   
   // 기존 목록 클리어 (헤더 제외)
@@ -157,7 +270,7 @@ function createUsageHistoryItem(record) {
   
   item.innerHTML = `
     <div class="item-date">
-      <div class="date-main">${record.date}</div>
+      <div class="date-main">${formatDate(record.date)}</div>
       <div class="date-day">${getKoreanDayOfWeek(record.date)}</div>
     </div>
     <div class="item-slot">
@@ -354,19 +467,7 @@ async function loadPaymentHistory(page = currentPage, filters = currentFilters) 
   console.log('💳 결제 내역 로드 중...', { page, filters });
   
   try {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: '20'
-    });
-    
-    // 필터 추가
-    if (filters.startDate) params.append('startDate', filters.startDate);
-    if (filters.endDate) params.append('endDate', filters.endDate);
-    if (filters.status && filters.status !== 'all') params.append('status', filters.status);
-    if (filters.keyword) params.append('keyword', filters.keyword);
-    
-    const data = await apiRequest(`/api/payment/history?${params.toString()}`);
-    if (!data) return false;
+    const data = await getMockPaymentData(page, filters);
     
     currentPage = page;
     
@@ -472,19 +573,7 @@ async function loadReservationHistory(page = currentPage, filters = currentFilte
   console.log('📅 예약 내역 로드 중...', { page, filters });
   
   try {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: '20'
-    });
-    
-    // 필터 추가
-    if (filters.startDate) params.append('startDate', filters.startDate);
-    if (filters.endDate) params.append('endDate', filters.endDate);
-    if (filters.status && filters.status !== 'all') params.append('status', filters.status);
-    if (filters.keyword) params.append('keyword', filters.keyword);
-    
-    const data = await apiRequest(`/api/reservations/history?${params.toString()}`);
-    if (!data) return false;
+    const data = await getMockReservationData(page, filters);
     
     currentPage = page;
     
@@ -714,6 +803,58 @@ function updatePagination(type, pagination) {
 }
 
 // ========================================
+// 상세보기 및 액션 함수들
+// ========================================
+function showUsageDetail(recordId) {
+  console.log('이용내역 상세보기:', recordId);
+  showToast('이용내역 상세보기 기능은 준비중입니다.', 'info');
+}
+
+function downloadUsageReceipt(recordId) {
+  console.log('영수증 다운로드:', recordId);
+  showToast('영수증 다운로드 기능은 준비중입니다.', 'info');
+}
+
+function showPaymentDetail(paymentId) {
+  console.log('결제내역 상세보기:', paymentId);
+  showToast('결제내역 상세보기 기능은 준비중입니다.', 'info');
+}
+
+function downloadPaymentReceipt(paymentId) {
+  console.log('결제 영수증 다운로드:', paymentId);
+  showToast('결제 영수증 다운로드 기능은 준비중입니다.', 'info');
+}
+
+function showReservationDetail(reservationId) {
+  console.log('예약내역 상세보기:', reservationId);
+  showToast('예약내역 상세보기 기능은 준비중입니다.', 'info');
+}
+
+function cancelReservation(reservationId) {
+  if (confirm('정말 예약을 취소하시겠습니까?')) {
+    console.log('예약 취소:', reservationId);
+    showToast('예약 취소 기능은 준비중입니다.', 'info');
+  }
+}
+
+function exportRecords() {
+  console.log('내역 내보내기');
+  showToast('내역 내보내기 기능은 준비중입니다.', 'info');
+}
+
+function closeModal() {
+  const modal = document.getElementById('detail-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function downloadReceipt() {
+  console.log('영수증 다운로드');
+  showToast('영수증 다운로드 기능은 준비중입니다.', 'info');
+}
+
+// ========================================
 // 실시간 업데이트
 // ========================================
 function startRecordsUpdates() {
@@ -747,11 +888,10 @@ function formatDate(dateString) {
   
   try {
     const date = new Date(dateString);
-    const yyyy = date.getFullYear();
     const MM = String(date.getMonth() + 1).padStart(2, '0');
     const dd = String(date.getDate()).padStart(2, '0');
     
-    return `${yyyy}-${MM}-${dd}`;
+    return `${MM}/${dd}`;
   } catch (error) {
     console.error('❌ 날짜 포맷팅 실패:', error);
     return '-';
@@ -774,13 +914,12 @@ function formatDateTime(dateTimeString) {
   
   try {
     const date = new Date(dateTimeString);
-    const yyyy = date.getFullYear();
     const MM = String(date.getMonth() + 1).padStart(2, '0');
     const dd = String(date.getDate()).padStart(2, '0');
     const hh = String(date.getHours()).padStart(2, '0');
     const mm = String(date.getMinutes()).padStart(2, '0');
     
-    return `${yyyy}-${MM}-${dd} ${hh}:${mm}`;
+    return `${MM}/${dd} ${hh}:${mm}`;
   } catch (error) {
     console.error('❌ 날짜시간 포맷팅 실패:', error);
     return '-';
@@ -827,6 +966,20 @@ function showErrorMessage(message) {
   }
 }
 
+// 공통 함수들 (가정)
+function showLoading(message) {
+  console.log('로딩 중:', message);
+}
+
+function hideLoading() {
+  console.log('로딩 완료');
+}
+
+function showToast(message, type) {
+  console.log(`${type.toUpperCase()}: ${message}`);
+  alert(message); // 실제로는 토스트 메시지를 구현
+}
+
 // ========================================
 // 페이지 정리
 // ========================================
@@ -845,3 +998,12 @@ window.resetFilters = resetFilters;
 window.loadUsageHistory = loadUsageHistory;
 window.loadPaymentHistory = loadPaymentHistory;
 window.loadReservationHistory = loadReservationHistory;
+window.showUsageDetail = showUsageDetail;
+window.downloadUsageReceipt = downloadUsageReceipt;
+window.showPaymentDetail = showPaymentDetail;
+window.downloadPaymentReceipt = downloadPaymentReceipt;
+window.showReservationDetail = showReservationDetail;
+window.cancelReservation = cancelReservation;
+window.exportRecords = exportRecords;
+window.closeModal = closeModal;
+window.downloadReceipt = downloadReceipt;
